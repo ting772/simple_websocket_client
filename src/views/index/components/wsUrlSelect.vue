@@ -7,10 +7,8 @@
         <el-button style="margin-left:auto;" type="success" size="small" plain @click.stop="copy(item)">copy</el-button>
         <el-button style="margin-left:10px;" type="info" size="small" plain
           @click.stop="deleteUrl(index)">delete</el-button>
-        <el-tooltip effect="dark" content="自定义消息发送">
-          <el-button circle :icon="Message" type="primary" plain
-            @click="$emit('showCustomMsgsTable', item)"></el-button>
-        </el-tooltip>
+        <el-button circle :icon="Message" type="primary" size="small" plain
+          @click="$emit('showCustomMsgsTable', item)"></el-button>
       </div>
     </el-option>
   </el-select>

@@ -5,7 +5,8 @@
         <el-input v-model="form.title" type="text" :maxlength="50" placeholder="请输入标题" clearable />
       </el-form-item>
       <el-form-item label="发送数据" prop="data" required>
-        <el-input v-model="form.data" type="text" placeholder="请输入发送的数据" clearable />
+        <el-input :autosize="{ minRows: 5, maxRows: 15 }" type="textarea" v-model="form.data" placeholder="请输入发送的数据"
+          clearable />
       </el-form-item>
       <el-form-item label="循环定时器运行间隔" prop="interval" style="align-items: center;">
         <el-input-number v-model="form.interval" :min="0" :step="500" step-strictly />
@@ -60,7 +61,20 @@ async function submit() {
     submitting.value = false
   }
   emit('save', { ...form })
+  model.value = false
 }
+
+watch(model, (newV) => {
+  if (!newV) {
+    // Object.assign(form, {
+    //   title: "",
+    //   data: "",
+    //   enable: false,
+    //   interval: 0
+    // })
+    formRef.value?.resetFields()
+  }
+})
 
 </script>
 <style scoped>

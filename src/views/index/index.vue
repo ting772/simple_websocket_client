@@ -11,9 +11,8 @@
           <el-text type="primary">总计：{{ total }}条</el-text>
           <el-text style="margin-left:10px;" type="success">过滤后：{{ filteredMsgs.length }}条</el-text>
           <el-button type="warning" @click="emptyList">清空消息</el-button>
-          <el-tooltip effect="dark" content="自定义消息发送">
-            <el-button circle :icon="Message" type="primary" plain @click="showCustomMsgsTable(url)"></el-button>
-          </el-tooltip>
+          <el-button v-if="ws" circle :icon="Message" type="primary" size="small" plain
+            @click="showCustomMsgsTable(url)"></el-button>
         </el-space>
       </div>
     </el-card>
@@ -27,11 +26,14 @@
 <script setup lang="ts">
 import { connectWs } from './ws'
 import Body from './components/body.vue'
+import { Message } from '@element-plus/icons-vue'
 import UrlSelect from './components/wsUrlSelect.vue'
 import FilterSelect from './components/filterSelect.vue'
-import { Message } from '@element-plus/icons-vue'
 import CustomMsgsTableModal from './components/customMsgsTableModal.vue'
 import { GLOBAL_WEBSOCKET } from '@/canstant/provideKey'
+import { load } from '@/hooks/usePersis'
+import { PREFIX_CUSTOM_MSGS } from '@/canstant/storageKey'
+import type { SAVED_CUSTOM_MSG_ITEM_TYPE } from '@/intefaface/main'
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
@@ -154,6 +156,11 @@ watch(state, (newV, oldV) => {
 })
 
 let id = 1
+let wsCacheMap = new Map<WebSocket, {
+  url: string;
+  jobs: any[]
+}>()
+
 
 async function connect() {
   if (state.value !== STATE.IDLE) return
@@ -182,29 +189,102 @@ async function connect() {
     }
   })
 
-  ws.value.value.addEventListener('close', function () {
+  ws.value.addEventListener('close', function () {
     state.value = STATE.IDLE
-    ws.value = null
+    ws.value = undefined
+  })
+
+  let jobs = [] as any[]
+  wsCacheMap.set(ws.value, {
+    url: url.value,
+    jobs
+  })
+
+  //ws连接成功时自动执行本地已经定义好的消息重复发送任务
+  let customMsgs = load<SAVED_CUSTOM_MSG_ITEM_TYPE[]>(`${PREFIX_CUSTOM_MSGS}${url.value}`, [])
+  customMsgs.forEach(item => {
+    let { id: jobId, interval, enable, data } = item
+    if (interval > 0 && enable) {
+
+      let timer = setInterval((websocket: WebSocket) => {
+        try {
+
+          /**
+           * 如果服务器端关闭或者 主动调用close(clientWebsocket)的话，用户
+           * 端调用send发送数据，不会走异常
+           *
+           * websocket.readyState取以下值
+           *  0:套接字已创建，但连接尚未打开
+           *  1:连接已打开，准备进行通信
+           *  2:连接正在关闭中
+           *  3:连接已关闭或无法打开
+           */
+          console.debug(`ws状态-${websocket.readyState},url：${websocket.url}`)
+          if (websocket.readyState == 2 || websocket.readyState == 3) {
+            console.debug(`检测到ws状态为异常状态，readyState：${websocket.readyState}，自动取消任务`)
+            cancel(websocket)
+            return
+          }
+          websocket.send(data)
+        } catch (err) {
+          console.error('重复发送任务失败', err)
+        }
+      }, interval, ws.value)
+
+      const cancel = (websocket: WebSocket) => {
+        clearInterval(timer)
+        let config = wsCacheMap.get(websocket)
+        if (config) {
+          let index = 0
+          for (let job of config.jobs) {
+            if (job.jobId == jobId) {
+              config.jobs.splice(index, 1)
+              break
+            }
+            index++
+          }
+        }
+        console.debug('取消循环任务', jobId)
+      }
+      jobs.push({
+        jobId,
+        cancel
+      })
+    }
   })
 }
 
 function disconnect() {
+  if (!ws.value) return
   try {
-    ws.close()
+    ws.value.close()
   } catch (err) {
     ElMessage.error('断开连接异常')
     console.error(err)
   }
 }
 
-const customMsgsTableModalVisible = ref(true)
+const customMsgsTableModalVisible = ref(false)
 const customMsgsTableModalWsUrl = ref('')
 
 function showCustomMsgsTable(url: string) {
   customMsgsTableModalVisible.value = true
   customMsgsTableModalWsUrl.value = url
-  console.log(url)
 }
+
+
+watch([ws], ([ws], [oldWs]) => {
+  //ws关闭了
+  if (ws == undefined && oldWs) {
+    let config = wsCacheMap.get(oldWs)
+    if (config) {
+      let { jobs } = config
+      jobs.forEach(job => {
+        job.cancel(oldWs)
+      })
+    }
+  }
+})
 
 </script>
 

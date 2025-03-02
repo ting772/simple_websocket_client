@@ -5,7 +5,7 @@ function clearTimer() {
   timer = 0
 }
 
-export function connectWs(options: { url: string; timeout?: number }) {
+export function connectWs(options: { url: string; timeout?: number }): Promise<WebSocket> {
   let { url, timeout = 3000 } = options
   return new Promise((resolve, reject) => {
     let ws = new WebSocket(url)

@@ -1,4 +1,5 @@
 export type SAVED_CUSTOM_MSG_ITEM_TYPE = {
+  id: string;//伪随机唯一id
   created_at: string;//创建时间
   updated_at: string;//上次更新时间
   title?: string;//标题
@@ -8,4 +9,4 @@ export type SAVED_CUSTOM_MSG_ITEM_TYPE = {
 }
 
 
-export type CUSTOM_MSG_ITEM_NEW_CREATED_TYPE = Omit<SAVED_CUSTOM_MSG_ITEM_TYPE, 'created_at' | 'updated_at'>
+export type CUSTOM_MSG_ITEM_NEW_CREATED_TYPE = Omit<SAVED_CUSTOM_MSG_ITEM_TYPE, 'created_at' | 'updated_at' | 'id'>
