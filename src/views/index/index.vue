@@ -3,6 +3,7 @@
     <el-card>
       <el-space>
         <url-select :disabled="disabledSelect" v-model="url" @show-custom-msgs-table="showCustomMsgsTable"></url-select>
+        <el-button v-if="ws" circle :icon="Message" type="primary" plain @click="showCustomMsgsTable(url)"></el-button>
         <el-button v-bind="connectBtnConfig">{{ connectBtnConfig.value }}</el-button>
       </el-space>
       <div style="padding:10px 0;">
@@ -11,15 +12,18 @@
           <el-text type="primary">总计：{{ total }}条</el-text>
           <el-text style="margin-left:10px;" type="success">过滤后：{{ filteredMsgs.length }}条</el-text>
           <el-button type="warning" @click="emptyList">清空消息</el-button>
-          <el-button v-if="ws" circle :icon="Message" type="primary" size="small" plain
-            @click="showCustomMsgsTable(url)"></el-button>
+          <template v-if="ws">
+            <el-button type="success" @click="openSendMsgModal()">发送消息</el-button>
+          </template>
+
         </el-space>
       </div>
     </el-card>
 
     <Body :list="filteredMsgs"></Body>
-    <custom-msgs-table-modal v-model="customMsgsTableModalVisible"
-      :url="customMsgsTableModalWsUrl"></custom-msgs-table-modal>
+    <custom-msgs-table-modal v-model="customMsgsTableModalVisible" :url="customMsgsTableModalWsUrl"
+      @update-custom-msgs="updateCustomMsgs" @send-msg="openSendMsgModal"></custom-msgs-table-modal>
+    <send-msg-modal ref="sendMsgModalRef" @send="sendMsg"></send-msg-modal>
   </div>
 </template>
 
@@ -31,9 +35,9 @@ import UrlSelect from './components/wsUrlSelect.vue'
 import FilterSelect from './components/filterSelect.vue'
 import CustomMsgsTableModal from './components/customMsgsTableModal.vue'
 import { GLOBAL_WEBSOCKET } from '@/canstant/provideKey'
-import { load } from '@/hooks/usePersis'
-import { PREFIX_CUSTOM_MSGS } from '@/canstant/storageKey'
-import type { SAVED_CUSTOM_MSG_ITEM_TYPE } from '@/intefaface/main'
+import createWsJobCtl from './wsJobCtl'
+import type { CustomMsgUpdateType, SavedCustomMsgItemType } from '@/intefaface/main'
+import SendMsgModal from './components/sendMsgModal.vue'
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
@@ -149,18 +153,15 @@ watch(state, (newV, oldV) => {
       if (oldV == STATE.CONNECTTING) {
         ElMessage.warning('连接失败')
       } else if (oldV == STATE.CONNECTTED) {
-        ElMessage.success('断开连接')
+        ElMessage.info('断开连接')
       }
       break
   }
 })
 
 let id = 1
-let wsCacheMap = new Map<WebSocket, {
-  url: string;
-  jobs: any[]
-}>()
 
+let wsJobCtl = createWsJobCtl()
 
 async function connect() {
   if (state.value !== STATE.IDLE) return
@@ -194,64 +195,8 @@ async function connect() {
     ws.value = undefined
   })
 
-  let jobs = [] as any[]
-  wsCacheMap.set(ws.value, {
-    url: url.value,
-    jobs
-  })
-
-  //ws连接成功时自动执行本地已经定义好的消息重复发送任务
-  let customMsgs = load<SAVED_CUSTOM_MSG_ITEM_TYPE[]>(`${PREFIX_CUSTOM_MSGS}${url.value}`, [])
-  customMsgs.forEach(item => {
-    let { id: jobId, interval, enable, data } = item
-    if (interval > 0 && enable) {
-
-      let timer = setInterval((websocket: WebSocket) => {
-        try {
-
-          /**
-           * 如果服务器端关闭或者 主动调用close(clientWebsocket)的话，用户
-           * 端调用send发送数据，不会走异常
-           *
-           * websocket.readyState取以下值
-           *  0:套接字已创建，但连接尚未打开
-           *  1:连接已打开，准备进行通信
-           *  2:连接正在关闭中
-           *  3:连接已关闭或无法打开
-           */
-          console.debug(`ws状态-${websocket.readyState},url：${websocket.url}`)
-          if (websocket.readyState == 2 || websocket.readyState == 3) {
-            console.debug(`检测到ws状态为异常状态，readyState：${websocket.readyState}，自动取消任务`)
-            cancel(websocket)
-            return
-          }
-          websocket.send(data)
-        } catch (err) {
-          console.error('重复发送任务失败', err)
-        }
-      }, interval, ws.value)
-
-      const cancel = (websocket: WebSocket) => {
-        clearInterval(timer)
-        let config = wsCacheMap.get(websocket)
-        if (config) {
-          let index = 0
-          for (let job of config.jobs) {
-            if (job.jobId == jobId) {
-              config.jobs.splice(index, 1)
-              break
-            }
-            index++
-          }
-        }
-        console.debug('取消循环任务', jobId)
-      }
-      jobs.push({
-        jobId,
-        cancel
-      })
-    }
-  })
+  wsJobCtl.addWsClient(ws.value, url.value)
+  emptyList()
 }
 
 function disconnect() {
@@ -276,14 +221,52 @@ function showCustomMsgsTable(url: string) {
 watch([ws], ([ws], [oldWs]) => {
   //ws关闭了
   if (ws == undefined && oldWs) {
-    let config = wsCacheMap.get(oldWs)
-    if (config) {
-      let { jobs } = config
-      jobs.forEach(job => {
-        job.cancel(oldWs)
-      })
-    }
+    wsJobCtl.removeWsClient(oldWs)
   }
+})
+
+function updateCustomMsgs(updateType: CustomMsgUpdateType, url: string, data: any) {
+  switch (updateType) {
+    case 'update':
+    case 'create':
+      wsJobCtl.updateCustomMsg(ws.value, url, data as SavedCustomMsgItemType)
+      break;
+    case 'remove':
+      wsJobCtl.cancelJob(ws.value, data as string)
+      break;
+    default:
+      console.warn('未识别的更新类型')
+      break;
+  }
+}
+
+const sendMsgModalRef = ref<{
+  openModal: (init?: string) => void;
+  closeModal: () => void
+}>()
+
+function openSendMsgModal(str?: string) {
+  sendMsgModalRef.value!.openModal(str)
+}
+
+function sendMsg(msg: string, ctx: { clear: () => void; close: () => void }) {
+  if (!ws.value) {
+    ElMessage.error('无ws实例，无法发送消息')
+    throw "无ws实例，无法发送消息"
+  }
+  if (ws.value.readyState != 1) {
+    ElMessage.error(`ws异常状态码：${ws.value.readyState}，无法发送消息`)
+    throw `[sendMsg]ws readyState状态异常：${ws.value.readyState}，无法发送消息`
+  }
+  ws.value.send(msg)
+  ElMessage.success('消息进入发送队列')
+  console.debug('[sendMsg]bufferedAmount：', ws.value.bufferedAmount)
+  ctx.clear()
+  ctx.close()
+}
+
+onUnmounted(() => {
+  wsJobCtl.dispose()
 })
 
 </script>

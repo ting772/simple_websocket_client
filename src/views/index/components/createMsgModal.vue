@@ -24,19 +24,44 @@
 </template>
 
 <script setup lang="ts">
-import type { CUSTOM_MSG_ITEM_NEW_CREATED_TYPE } from '@/intefaface/main'
+import type { CustomMsgItemCreateType, SavedCustomMsgItemType } from '@/intefaface/main'
 import type { FormInstance } from 'element-plus';
 
 const emit = defineEmits<{
-  (e: "save", data: CUSTOM_MSG_ITEM_NEW_CREATED_TYPE): void
+  (e: "create", data: CustomMsgItemCreateType): void;
+  (e: "update", data: SavedCustomMsgItemType): void
 }>()
+
+const props = defineProps<{
+  form: SavedCustomMsgItemType | undefined | null
+}>()
+
 const model = defineModel() as any
 const formRef = ref<FormInstance>()
-const form = reactive<CUSTOM_MSG_ITEM_NEW_CREATED_TYPE>({
-  title: "",
-  data: "",
-  enable: false,
-  interval: 0
+
+function getInitialForm() {
+  return {
+    title: "",
+    data: "",
+    enable: false,
+    interval: 0
+  }
+}
+const form = ref<CustomMsgItemCreateType>(getInitialForm())
+
+//编辑模式下，填写已有的字段
+watch([model, () => props.form], ([visible, editForm]) => {
+  if (visible && editForm) {
+    form.value = Object.assign(form.value, editForm)
+  }
+})
+
+//关闭窗口置空
+watch(model, (newV) => {
+  if (!newV) {
+    form.value = getInitialForm()
+    formRef.value?.resetFields()
+  }
 })
 
 const rules = ref({
@@ -60,21 +85,15 @@ async function submit() {
   } finally {
     submitting.value = false
   }
-  emit('save', { ...form })
+
+  if (props.form) {
+    emit('update', { ...props.form, ...form.value })
+  } else {
+    emit('create', { ...form.value })
+  }
+
   model.value = false
 }
-
-watch(model, (newV) => {
-  if (!newV) {
-    // Object.assign(form, {
-    //   title: "",
-    //   data: "",
-    //   enable: false,
-    //   interval: 0
-    // })
-    formRef.value?.resetFields()
-  }
-})
 
 </script>
 <style scoped>
