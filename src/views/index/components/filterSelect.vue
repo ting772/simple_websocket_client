@@ -1,6 +1,7 @@
 <template>
   <el-select v-model="model" multiple filterable allow-create placeholder="输入过滤正则表达式" @change="selectChange"
-    default-first-option :disabled="disabled" clearable collapse-tags :max-collapse-tags="4" collapse-tags-tooltip>
+    default-first-option :disabled="disabled" clearable collapse-tags :max-collapse-tags="4" collapse-tags-tooltip
+    no-data-text="没有历史记录">
     <el-option v-for="(item, index) in list" :key="item" :label="item" :value="item">
       <div class="option-inner">
         <span>{{ item }}</span>

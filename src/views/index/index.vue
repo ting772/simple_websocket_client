@@ -42,7 +42,9 @@ import SendMsgModal from './components/sendMsgModal.vue'
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     console.debug('hot dispose callback')
-    if (ws.value) ws.value.close()
+    if (ws.value) {
+      ws.value.close()
+    }
   })
 }
 
@@ -159,7 +161,7 @@ watch(state, (newV, oldV) => {
   }
 })
 
-let id = 1
+let id = 0
 
 let wsJobCtl = createWsJobCtl()
 

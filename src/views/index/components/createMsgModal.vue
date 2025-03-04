@@ -9,7 +9,7 @@
           clearable />
       </el-form-item>
       <el-form-item label="循环定时器运行间隔" prop="interval" style="align-items: center;">
-        <el-input-number v-model="form.interval" :min="0" :step="500" step-strictly />
+        <el-input-number v-model="form.interval" :min="0" :step="gConfig.customMsgIntervalStep" step-strictly />
       </el-form-item>
       <el-form-item label="是否开启" prop="enable" style="align-items: center;">
         <el-switch v-model="form.enable" size="large" active-text="开启" inactive-text="关闭" />
@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import type { CustomMsgItemCreateType, SavedCustomMsgItemType } from '@/intefaface/main'
 import type { FormInstance } from 'element-plus';
+import gConfig from '@/canstant/config'
 
 const emit = defineEmits<{
   (e: "create", data: CustomMsgItemCreateType): void;

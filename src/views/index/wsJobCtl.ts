@@ -1,7 +1,9 @@
 import { PREFIX_CUSTOM_MSGS } from '@/canstant/storageKey'
 import type { SavedCustomMsgItemType } from '@/intefaface/main'
 import { load } from '@/hooks/usePersis'
-
+import createJobRunner from './jobRunner'
+import createLogger from '@/utils/log'
+import gConfig from '@/canstant/config'
 
 type CustomMsgJob = {
   jobId: string;
@@ -10,20 +12,20 @@ type CustomMsgJob = {
 }
 
 export default function createWsJobCtl() {
+
+  let { debug: debugLog, error: errorLog, warn: warnLog, log } = createLogger('[wsJobController]1')
   let wsCacheMap = new Map<WebSocket, {
     url: string;
     jobs: CustomMsgJob[]
   }>()
 
+  let jobRunner = createJobRunner({ interval: gConfig.customMsgIntervalStep })
+
   function _createJob(ws: WebSocket, item: SavedCustomMsgItemType) {
     let { id: jobId, interval, enable, data } = item
     if (interval > 0 && enable) {
-      const cancel = () => {
-        clearInterval(timer)
-        console.debug('[cancel]取消循环定时器任务', jobId)
-      }
 
-      let timer = setInterval((websocket: WebSocket) => {
+      const cancelJob = jobRunner.appendIntervalJob(() => {
         try {
 
           /**
@@ -37,19 +39,25 @@ export default function createWsJobCtl() {
            *  3:连接已关闭或无法打开
            */
           let d = new Date()
-          console.debug(`${d.toLocaleTimeString()} ws readyState：${websocket.readyState},url：${websocket.url}`)
-          if (websocket.readyState == 2 || websocket.readyState == 3) {
+          let readyState = ws.readyState
+          debugLog(`[job] ${d.toLocaleTimeString()} ws readyState：${readyState},url：${ws.url}`)
+          if (readyState == 2 || readyState == 3) {
+            warnLog(`[job]ws状态为异常状态，readyState：${readyState}，自动取消任务`)
             cancel()
-            console.debug(`检测到ws状态为异常状态，readyState：${websocket.readyState}，自动取消任务`)
             return
           }
-          websocket.send(data)
+          ws.send(data)
         } catch (err) {
+          errorLog('[job]发送任务失败', err)
           cancel()
-          console.error('重复发送任务失败', err)
           return
         }
-      }, interval, ws)
+      }, interval)
+
+      const cancel = () => {
+        log('[job]取消任务', jobId)
+        cancelJob()
+      }
 
       return {
         jobId,
@@ -62,10 +70,10 @@ export default function createWsJobCtl() {
   //缓存ws，url，及由自定义消息生成的任务
   function addWsClient(ws: WebSocket, url: string) {
     if (wsCacheMap.size > 0) {
-      console.warn(`[addWsClient]ws缓存目前只支持一个缓存ws实例，当前数量：${wsCacheMap.size}`)
+      warnLog(`[addWsClient]ws缓存目前只支持一个缓存ws实例，当前数量：${wsCacheMap.size}`)
     }
     if (wsCacheMap.has(ws)) {
-      console.warn('[addWsClient]检测到websocket实例重复，addWsClient调用失败')
+      warnLog('[addWsClient]检测到websocket实例重复，addWsClient调用失败')
       return
     }
     let jobs = [] as any[]
@@ -83,7 +91,7 @@ export default function createWsJobCtl() {
       if (job) jobs.push(job)
     })
 
-    console.debug(`[addWsClient]为客户端${url}生成${jobs.length}个自动执行的任务`)
+    log(`[addWsClient]为客户端${url}生成${jobs.length}个自动执行的任务`)
   }
 
   /**
@@ -94,7 +102,7 @@ export default function createWsJobCtl() {
     let config = wsCacheMap.get(ws)
     if (config) {
       let { jobs } = config
-      console.debug(`[removeWsClient]移除websocket:${config.url}对应的客户端和缓存`, jobs.length > 0 ? `，并取消${jobs.length}个自动执行的任务` : '')
+      log(`[removeWsClient]移除websocket:${config.url}对应的客户端和缓存`, jobs.length > 0 ? `，并取消${jobs.length}个自动执行的任务` : '')
       jobs.forEach(job => {
         job.cancel()
       })
@@ -110,7 +118,7 @@ export default function createWsJobCtl() {
    */
   function cancelJob(ws: WebSocket | undefined | null, jobId: string) {
     if (!ws) {
-      console.debug('[cancelJob]cancelJob传递ws为空')
+      log('[cancelJob]cancelJob传递ws为空')
       return
     }
     let config = wsCacheMap.get(ws)
@@ -120,29 +128,29 @@ export default function createWsJobCtl() {
       if (index > -1) {
         jobs[index].cancel()
         jobs.splice(index, 1)
-        console.debug(`[cancelJob]移除任务${jobId}`)
+        log(`[cancelJob]移除任务${jobId}`)
       } else {
-        console.debug(`[cancelJob]缓存中未发现任务${jobId}`)
+        log(`[cancelJob]缓存中未发现任务${jobId}`)
       }
     } else {
-      console.debug('[cancelJob]没有发现缓存')
+      log('[cancelJob]没有发现缓存')
     }
   }
 
   function updateCustomMsg(ws: WebSocket | undefined | null, url: string, item: SavedCustomMsgItemType) {
     if (!ws) {
-      console.debug('[updateCustomMsg]传递ws为空')
+      log('[updateCustomMsg]传递ws为空')
       return
     }
 
     let config = wsCacheMap.get(ws)
     if (!config) {
-      console.warn('[updateCustomMsg]无法为ws客户端找到缓存')
+      log('[updateCustomMsg]无法为ws客户端找到缓存')
       return
     }
 
     if (config.url != url) {
-      console.warn('[updateCustomMsg]ws客户端缓存url与传入url不一致', `缓存url：${config.url}，传入url：${url}`)
+      log('[updateCustomMsg]ws客户端缓存url与传入url不一致', `缓存url：${config.url}，传入url：${url}`)
       return
     }
 
@@ -151,13 +159,13 @@ export default function createWsJobCtl() {
 
     //如果已有停止任务运行
     if (jobInRunnig) {
-      console.debug(`[updateCustomMsg]准备停止已运行的任务：${jobInRunnig.jobId}`)
+      log(`[updateCustomMsg]准备停止已运行的任务：${jobInRunnig.jobId}`)
       cancelJob(ws, jobInRunnig.jobId)
     }
 
     let newJob = _createJob(ws, item)
     if (newJob) {
-      console.debug(`[updateCustomMsg]启动任务：${newJob.jobId}`)
+      log(`[updateCustomMsg]启动任务：${newJob.jobId}`)
       config.jobs.push(newJob)
     }
   }
@@ -168,6 +176,7 @@ export default function createWsJobCtl() {
         removeWsClient(ws)
       }
     }
+    jobRunner.dispose()
   }
 
   return {
