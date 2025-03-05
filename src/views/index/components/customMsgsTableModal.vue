@@ -1,13 +1,13 @@
 <template>
-  <el-dialog v-model="model" title="自定义消息发送" width="80%" style="min-width: 1100px;">
+  <el-dialog v-model="model" title="自定义消息发送" width="80%">
     <div style="display: flex;padding:10px;">
       <el-button style="margin-left:auto;" type="success" @click="EditModalVisible = true">创建消息</el-button>
     </div>
-    <el-table :data="list" empty-text="没有自定义消息" align="right" :height="500" style="min-width: 1000px;">
-      <el-table-column property="created_at" label="创建时间" />
-      <el-table-column property="updated_at" label="修改时间" />
-      <el-table-column property="title" label="标题" width="200" class-name="title-col" />
-      <el-table-column property="data" label="数据" min-width="200" class-name="data-col" />
+    <el-table :data="list" empty-text="没有自定义消息" align="right" :height="400">
+      <el-table-column property="created_at" min-width="120" label="创建时间" />
+      <!-- <el-table-column property="updated_at" label="修改时间" /> -->
+      <el-table-column property="title" label="标题" class-name="title-col" />
+      <el-table-column property="data" label="数据" class-name="data-col" />
       <el-table-column property="interval" label="循环定时器间隔(ms)" />
       <el-table-column property="enable" label="是否开启循环定时器间隔">
         <template v-slot="{ row }">
@@ -30,14 +30,14 @@
       </el-table-column>
     </el-table>
   </el-dialog>
-  <create-msg-modal v-model="EditModalVisible" @create="onCreateMsg" :form="editForm"
-    @update="onUpdateMsg"></create-msg-modal>
+  <edit-msg-modal v-model="EditModalVisible" @create="onCreateMsg" :form="editForm"
+    @update="onUpdateMsg"></edit-msg-modal>
 </template>
 
 <script setup lang="ts">
 import usePersis from '@/hooks/usePersis'
 import { PREFIX_CUSTOM_MSGS } from '@/canstant/storageKey'
-import CreateMsgModal from './createMsgModal.vue'
+import EditMsgModal from './editMsgModal.vue'
 import { GLOBAL_WEBSOCKET } from '@/canstant/provideKey'
 import type { SavedCustomMsgItemType, CustomMsgItemCreateType, } from '@/intefaface/main'
 import { nanoid } from 'nanoid'

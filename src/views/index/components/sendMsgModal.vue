@@ -32,6 +32,7 @@ function toSend() {
 }
 
 function openModal(str?: string) {
+  imperative = true
   model.value = true
   msg.value = str ?? ''
 }
@@ -44,13 +45,18 @@ function clearInput() {
   msg.value = ''
 }
 
+let imperative = false
+
 watch(() => props.msg, (newV) => {
   msg.value = newV ?? ''
 })
 
 watch(model, (open) => {
   if (!open) {
+    imperative = false
     clearInput()
+  } else if (!imperative) {
+    msg.value = props.msg ?? ''
   }
 })
 

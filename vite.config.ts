@@ -1,12 +1,12 @@
 import { fileURLToPath, URL } from 'node:url'
 import { extname } from 'node:path'
-
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import electron from 'vite-plugin-electron/simple'
 
 let imageReg = /jpg|png|jpeg/i
 let cssReg = /css/i
@@ -16,7 +16,6 @@ let mediaReg = /ogg/i
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
     AutoImport({
       include: [
         /\.(t|js)s$/,
@@ -39,7 +38,26 @@ export default defineConfig({
       "dts": true,
       resolvers: [ElementPlusResolver()],
     }),
-  ],
+  ].concat(
+    process.env.APP_TYPE == 'ELECTRON' ?
+      [
+        electron({
+          main: {
+            // Shortcut of `build.lib.entry`
+            entry: 'electron/main.ts',
+          },
+          preload: {
+            // Shortcut of `build.rollupOptions.input`
+            input: 'electron/preload.ts',
+          },
+          // Optional: Use Node.js API in the Renderer process
+          renderer: {},
+        })
+      ] :
+      [
+        vueDevTools(),
+      ]
+  ),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

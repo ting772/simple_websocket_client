@@ -1,12 +1,12 @@
 <template>
-  <el-dialog v-model="model" title="创建自定义消息" width="900">
-    <el-form ref="formRef" style="max-width: 600px" :model="form" label-width="auto" :rules="rules">
+  <el-dialog v-model="model" title="创建自定义消息" style="width: 80%;">
+    <el-form ref="formRef" :model="form" label-width="auto" :rules="rules" label-position="left"
+      require-asterisk-position="right">
       <el-form-item label="标题" prop="title">
         <el-input v-model="form.title" type="text" :maxlength="50" placeholder="请输入标题" clearable />
       </el-form-item>
       <el-form-item label="发送数据" prop="data" required>
-        <el-input :autosize="{ minRows: 5, maxRows: 15 }" type="textarea" v-model="form.data" placeholder="请输入发送的数据"
-          clearable />
+        <el-input :rows="10" resize="none" type="textarea" v-model="form.data" placeholder="请输入发送的数据" clearable />
       </el-form-item>
       <el-form-item label="循环定时器运行间隔" prop="interval" style="align-items: center;">
         <el-input-number v-model="form.interval" :min="0" :step="gConfig.customMsgIntervalStep" step-strictly />
