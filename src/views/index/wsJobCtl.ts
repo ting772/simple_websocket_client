@@ -11,6 +11,17 @@ type CustomMsgJob = {
   cancel: () => void
 }
 
+export enum UPDATE_CUSTOM_MSG_CALLBACK_STATE {
+  NO_WS,
+  NO_WS_CACHE,
+  WS_CACHE_URL_NOT_MATCH,
+  WS_CACHE_NOT_MATCH_JOB,
+  JOB_RESTART,
+  JOB_START,
+  JOB_CANCEL,
+  REMOVE_WS_CLIENT,
+}
+
 export default function createWsJobCtl() {
 
   let { debug: debugLog, error: errorLog, warn: warnLog, log } = createLogger('[wsJobController]1')
@@ -98,7 +109,7 @@ export default function createWsJobCtl() {
    * 取消所有执行中的任务，并移除缓存
    * @param ws
    */
-  function removeWsClient(ws: WebSocket) {
+  function removeWsClient(ws: WebSocket, cb?: (state: UPDATE_CUSTOM_MSG_CALLBACK_STATE, ...restArg: unknown[]) => void) {
     let config = wsCacheMap.get(ws)
     if (config) {
       let { jobs } = config
@@ -107,6 +118,9 @@ export default function createWsJobCtl() {
         job.cancel()
       })
       wsCacheMap.delete(ws)
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.REMOVE_WS_CLIENT, jobs.length)
+    } else {
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.NO_WS_CACHE)
     }
   }
 
@@ -116,9 +130,10 @@ export default function createWsJobCtl() {
    * @param jobId
    * @param remove
    */
-  function cancelJob(ws: WebSocket | undefined | null, jobId: string) {
+  function cancelJob(ws: WebSocket | undefined | null, jobId: string, cb?: (stateCode: UPDATE_CUSTOM_MSG_CALLBACK_STATE) => void) {
     if (!ws) {
       log('[cancelJob]cancelJob传递ws为空')
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.NO_WS)
       return
     }
     let config = wsCacheMap.get(ws)
@@ -129,28 +144,34 @@ export default function createWsJobCtl() {
         jobs[index].cancel()
         jobs.splice(index, 1)
         log(`[cancelJob]移除任务${jobId}`)
+        cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_CANCEL)
       } else {
         log(`[cancelJob]缓存中未发现任务${jobId}`)
+        cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.WS_CACHE_NOT_MATCH_JOB)
       }
     } else {
       log('[cancelJob]没有发现缓存')
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.NO_WS_CACHE)
     }
   }
 
-  function updateCustomMsg(ws: WebSocket | undefined | null, url: string, item: SavedCustomMsgItemType) {
+  function updateCustomMsg(ws: WebSocket | undefined | null, url: string, item: SavedCustomMsgItemType, cb?: (stateCode: UPDATE_CUSTOM_MSG_CALLBACK_STATE) => void) {
     if (!ws) {
       log('[updateCustomMsg]传递ws为空')
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.NO_WS)
       return
     }
 
     let config = wsCacheMap.get(ws)
     if (!config) {
       log('[updateCustomMsg]无法为ws客户端找到缓存')
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.NO_WS_CACHE)
       return
     }
 
     if (config.url != url) {
       log('[updateCustomMsg]ws客户端缓存url与传入url不一致', `缓存url：${config.url}，传入url：${url}`)
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.WS_CACHE_URL_NOT_MATCH)
       return
     }
 
@@ -167,6 +188,9 @@ export default function createWsJobCtl() {
     if (newJob) {
       log(`[updateCustomMsg]启动任务：${newJob.jobId}`)
       config.jobs.push(newJob)
+      cb?.(jobInRunnig ? UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_RESTART : UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_START)
+    } else if (jobInRunnig) {
+      cb?.(UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_CANCEL)
     }
   }
 

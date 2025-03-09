@@ -1,0 +1,22 @@
+{
+  "directories": {
+    "output": "dist-app",//打包结果输出目录
+  },
+  "win": {
+    "target": "nsis",//nsis是windows安装程序制作程序
+  },
+  "files": [
+    "dist-web/**/*",
+    "dist-electron/**/*",
+  ],//哪些文件被打包进app
+  "asar": true,//打包进app的文件是否制成asar归档文件格式
+  "nsis": {
+    "oneClick": false, //一键点击
+    "allowToChangeInstallationDirectory": true,//可以调整安装目录
+    "displayLanguageSelector": true,//语言选择
+    "uninstallDisplayName": "${productName}",//卸载展示名称
+    "createDesktopShortcut": true,//创建桌面快捷图标
+    "createStartMenuShortcut": true,//开始菜单创建快捷图标
+    "shortcutName": "${productName}",//快捷名称
+  }
+}

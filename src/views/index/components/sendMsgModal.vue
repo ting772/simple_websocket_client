@@ -1,6 +1,6 @@
 <template>
   <el-dialog v-model="model" title="发送消息" width="900">
-    <el-input :rows="20" type="textarea" v-model="msg" placeholder="请输入发送的数据" clearable />
+    <el-input :rows="20" type="textarea" v-model="msg" placeholder="请输入发送的数据" clearable ref="inputRef" />
     <template #footer>
       <el-button type="success" @click="toSend">发送</el-button>
       <el-button type="info" @click="model = false">取消</el-button>
@@ -60,7 +60,15 @@ watch(model, (open) => {
   }
 })
 
+watchEffect(() => {
+  if (model.value) {
+    setTimeout(() => {
+      inputRef.value.focus()
+    }, 0)
+  }
+})
 
+const inputRef = ref()
 </script>
 <style scoped>
 .option-inner {

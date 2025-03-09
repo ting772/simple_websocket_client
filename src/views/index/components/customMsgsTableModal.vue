@@ -30,7 +30,7 @@
       </el-table-column>
     </el-table>
   </el-dialog>
-  <edit-msg-modal v-model="EditModalVisible" @create="onCreateMsg" :form="editForm"
+  <edit-msg-modal v-model="EditModalVisible" :form="editForm" @create="onCreateMsg"
     @update="onUpdateMsg"></edit-msg-modal>
 </template>
 

@@ -30,3 +30,5 @@ coverage
 *.tsbuildinfo
 package-lock.json
 dist-electron
+dist-web
+dist-app

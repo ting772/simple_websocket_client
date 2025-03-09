@@ -15,7 +15,6 @@
           <template v-if="ws">
             <el-button type="success" @click="openSendMsgModal()">发送消息</el-button>
           </template>
-
         </el-space>
       </div>
     </el-card>
@@ -35,7 +34,7 @@ import UrlSelect from './components/wsUrlSelect.vue'
 import FilterSelect from './components/filterSelect.vue'
 import CustomMsgsTableModal from './components/customMsgsTableModal.vue'
 import { GLOBAL_WEBSOCKET } from '@/canstant/provideKey'
-import createWsJobCtl from './wsJobCtl'
+import createWsJobCtl, { UPDATE_CUSTOM_MSG_CALLBACK_STATE } from './wsJobCtl'
 import type { CustomMsgUpdateType, SavedCustomMsgItemType } from '@/intefaface/main'
 import SendMsgModal from './components/sendMsgModal.vue'
 
@@ -223,18 +222,42 @@ function showCustomMsgsTable(url: string) {
 watch([ws], ([ws], [oldWs]) => {
   //ws关闭了
   if (ws == undefined && oldWs) {
-    wsJobCtl.removeWsClient(oldWs)
+    wsJobCtl.removeWsClient(oldWs, (stateCode, ...args) => {
+      if (stateCode == UPDATE_CUSTOM_MSG_CALLBACK_STATE.REMOVE_WS_CLIENT) {
+        ElMessage.success(`取消${args[0]}个正在运行的任务`)
+      }
+    })
   }
 })
 
 function updateCustomMsgs(updateType: CustomMsgUpdateType, url: string, data: any) {
+  let cb = (stateCode: UPDATE_CUSTOM_MSG_CALLBACK_STATE) => {
+    switch (stateCode) {
+      case UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_START:
+      case UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_RESTART:
+      case UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_CANCEL:
+        ElMessage.success((
+          {
+            [UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_START]: '开始运行任务',
+            [UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_RESTART]: '重新运行任务',
+            [UPDATE_CUSTOM_MSG_CALLBACK_STATE.JOB_CANCEL]: '任务已取消',
+          } as any
+        )[stateCode])
+        break
+
+      default:
+        break
+    }
+  }
   switch (updateType) {
     case 'update':
     case 'create':
-      wsJobCtl.updateCustomMsg(ws.value, url, data as SavedCustomMsgItemType)
+      ElMessage.success(`${updateType == 'create' ? '创建' : '修改'}成功`)
+      wsJobCtl.updateCustomMsg(ws.value, url, data as SavedCustomMsgItemType, cb)
       break;
     case 'remove':
-      wsJobCtl.cancelJob(ws.value, data as string)
+      ElMessage.success('操作成功')
+      wsJobCtl.cancelJob(ws.value, data as string, cb)
       break;
     default:
       console.warn('未识别的更新类型')

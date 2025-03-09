@@ -1,6 +1,6 @@
 <template>
   <el-select v-model="model" filterable allow-create placeholder="选择或者输入一个ws服务器地址" style="width: 596px;"
-    @change="selectChange" default-first-option :disabled="disabled" clearable>
+    @change="selectChange" default-first-option :disabled="disabled" clearable no-data-text="没有历史记录">
     <el-option v-for="(item, index) in list" :key="item" :label="item" :value="item">
       <div class="option-inner">
         <span>{{ item }}</span>

@@ -1,7 +1,7 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import installDevtoolToggle from './events/toggleDevtool'
+import { cwd } from 'node:process'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +13,10 @@ app.disableHardwareAcceleration()
 function createMainWindow() {
   const win = new BrowserWindow({
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs')
+      preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true, // 确保 webSecurity 是启用的
     },
     width: minWidth,
     height: minHeight,
@@ -28,15 +31,28 @@ function createMainWindow() {
     win.show()
   })
 
-  installDevtoolToggle(win)
+  //@ts-ignore
+  if (1 || import.meta.env.DEV) {
+    ipcMain.on('F12_PRESSED', () => {
+      let c = win.webContents
+      if (!c.isDevToolsOpened()) {
+        c.openDevTools()
+      }
+      else {
+        c.closeDevTools()
+      }
+    })
+  }
+
   // You can use `process.env.VITE_DEV_SERVER_URL` when the vite command is called `serve`
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
   } else {
-    // Load your file
-    win.loadFile('dist/index.html');
+    //@ts-ignore  Load your file
+    win.loadFile(path.join(import.meta.env.VITE_WEB_BUILD_DIST, 'index.html'));
   }
 }
+
 app.whenReady().then(() => {
   createMainWindow()
 

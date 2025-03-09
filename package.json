@@ -1,14 +1,17 @@
 {
   "name": "simple_websocket_client",
   "productName": "Simple Websocket Client",
+  "description": "一个简单与websocket服务器通信的客户端",
   "version": "0.0.0",
+  "author": "thing772",
   "private": true,
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "dev:app": "cross-env APP_TYPE=ELECTRON vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "dev:app": "cross-env APP_TYPE=ELECTRON vite",
+    "build:app": "cross-env APP_TYPE=ELECTRON vite build && electron-builder build",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
@@ -16,13 +19,13 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "electron": "^35.0.0",
     "element-plus": "^2.9.3",
     "nanoid": "^5.1.2",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@electron/fuses": "^1.8.0",
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.13.4",
     "@vitejs/plugin-vue": "^5.2.1",
@@ -30,6 +33,9 @@
     "@vue/eslint-config-typescript": "^14.4.0",
     "@vue/tsconfig": "^0.7.0",
     "cross-env": "^7.0.3",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-squirrel-startup": "^1.0.1",
     "eslint": "^9.20.1",
     "eslint-plugin-vue": "^9.32.0",
     "jiti": "^2.4.2",
