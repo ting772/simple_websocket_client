@@ -8,10 +8,10 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import electron from 'vite-plugin-electron/simple'
 
-let imageReg = /jpg|png|jpeg/i
-let cssReg = /css/i
+const imageReg = /jpg|png|jpeg/i
+const cssReg = /css/i
 
-let mediaReg = /ogg/i
+const mediaReg = /ogg/i
 
 // https://vite.dev/config/
 
@@ -87,8 +87,8 @@ export default defineConfig(({ mode }) => {
             return null;
           },
           assetFileNames(assetInfo) {
-            let name = assetInfo.names[0]
-            let ext = extname(name)
+            const name = assetInfo.names[0]
+            const ext = extname(name)
             let dir = ''
             if (imageReg.test(ext)) {
               dir = 'imgs/'

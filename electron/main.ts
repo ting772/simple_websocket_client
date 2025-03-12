@@ -27,7 +27,7 @@ function getAppPath() {
 
   log.initialize();
 
-  for (let key in log.transports) {
+  for (const key in log.transports) {
     if (log.transports[key]) log.transports[key].level = false
   }
 
@@ -70,7 +70,7 @@ function createMainWindow() {
   //@ts-ignore
   if (!app.isPackaged) {
     ipcMain.on('F12_PRESSED', () => {
-      let c = win.webContents
+      const c = win.webContents
       if (!c.isDevToolsOpened()) {
         c.openDevTools()
       }
