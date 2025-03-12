@@ -2,13 +2,49 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cwd } from 'node:process'
+import log from 'electron-log/main';
+import loggerConfig from '../src/canstant/loggerConfig'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const minWidth = 1100
 const minHeight = 740
-app.disableHardwareAcceleration()
+app.disableHardwareAcceleration();
+
+function getAppPath() {
+  return app.isPackaged ? path.dirname(app.getPath('exe')) : cwd()
+}
+
+(function () {
+  //设置logs目录位置，dev模式下，项目根目录/logs，
+  function setLogPath() {
+    //@ts-ignore
+    app.setAppLogsPath(path.join(getAppPath(), 'logs'))
+  }
+
+  setLogPath()
+
+  log.initialize();
+
+  for (let key in log.transports) {
+    if (log.transports[key]) log.transports[key].level = false
+  }
+
+  loggerConfig.main.forEach(({ type, enable, ...others }) => {
+    Object.assign(
+      log.transports.file,
+      others, type == 'file' ? {
+        resolvePathFn: (obj) => {
+          return path.join(app.getPath('logs'), obj.fileName)
+        }
+      } : null
+    )
+  })
+
+  // log.eventLogger.startLogging()
+  log.errorHandler.startCatching()
+})()
 
 function createMainWindow() {
   const win = new BrowserWindow({
@@ -32,7 +68,7 @@ function createMainWindow() {
   })
 
   //@ts-ignore
-  if (1 || import.meta.env.DEV) {
+  if (!app.isPackaged) {
     ipcMain.on('F12_PRESSED', () => {
       let c = win.webContents
       if (!c.isDevToolsOpened()) {

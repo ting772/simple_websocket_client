@@ -40,21 +40,22 @@ export default function createJobRunner(options?: { debug?: boolean, autoStart?:
   let list = [] as Job[]
   let started = false, timer: Timer | undefined
 
-  const { debug: debugLog, log } = createLogger('[job runner]', { debug })
+
+  const logger = createLogger('[job runner]', { debug })
 
   function launchTimer() {
     let idleCounter = 0
     if (started && !timer) {
-      log('全局定时器初始并启动')
+      logger.log('全局定时器初始并启动')
       timer = new Timer()
       timer.init(() => {
         if (list.length == 0) {
           idleCounter++
-          debugLog('定时器空转,当前空转次数：', idleCounter)
+          logger.debug('定时器空转,当前空转次数：', idleCounter)
           if (idleCounter > gConfig.idlingMaxCount) {
             timer!.destroy()
             timer = undefined
-            log('定时器销毁')
+            logger.log('定时器销毁')
             return
           }
         } else {
@@ -76,25 +77,26 @@ export default function createJobRunner(options?: { debug?: boolean, autoStart?:
   }
 
   function _runJobs() {
-    let d = new Date()
+    let d = new Date().getTime()
     for (let job of list) {
       let { type, run, interval, lastRunAt } = job
       if (type != 'interval') {
-        console.warn('暂时不支持interval外的job类型')
+        logger.warn('暂时不支持interval外的job类型')
         continue
       }
       if (interval == 0) {
-        console.warn('interval job不支持时间间隔为0')
         continue
       }
       if (lastRunAt == 0) {
-        job.lastRunAt = +d
+        job.lastRunAt = d
+        continue
       }
       if (+d >= lastRunAt + interval) {
         try {
           run()
+          job.lastRunAt = d
         } catch (err) {
-          console.error(`job[${run.name ?? '-'}]执行异常`, err)
+          logger.error(`job[${run.name ?? '-'}]执行异常`, err)
         }
       }
     }
@@ -110,7 +112,7 @@ export default function createJobRunner(options?: { debug?: boolean, autoStart?:
 
   function start() {
     if (started) return
-    log('启动')
+    logger.log('启动')
     started = true
     if (list.length > 0) {
       launchTimer()
@@ -118,7 +120,7 @@ export default function createJobRunner(options?: { debug?: boolean, autoStart?:
   }
 
   function stop() {
-    log('停止')
+    logger.log('停止')
     started = false
     if (timer) timer.stop()
     _resetIntervalJobLastRunAt()
@@ -127,7 +129,7 @@ export default function createJobRunner(options?: { debug?: boolean, autoStart?:
   function dispose() {
     list = []
     started = false
-    log('销毁')
+    logger.log('销毁')
     if (timer) timer.destroy()
   }
 

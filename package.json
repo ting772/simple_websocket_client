@@ -11,7 +11,8 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "dev:app": "cross-env APP_TYPE=ELECTRON vite",
-    "build:app": "cross-env APP_TYPE=ELECTRON vite build && electron-builder build",
+    "build:app": "cross-env APP_TYPE=ELECTRON npm run build-only",
+    "make": "npm run build:app && electron-builder build",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
@@ -19,10 +20,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "element-plus": "^2.9.3",
-    "nanoid": "^5.1.2",
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "electron-log": "^5.3.2"
   },
   "devDependencies": {
     "@electron/fuses": "^1.8.0",
@@ -36,9 +34,11 @@
     "electron": "^35.0.0",
     "electron-builder": "^25.1.8",
     "electron-squirrel-startup": "^1.0.1",
+    "element-plus": "^2.9.3",
     "eslint": "^9.20.1",
     "eslint-plugin-vue": "^9.32.0",
     "jiti": "^2.4.2",
+    "nanoid": "^5.1.2",
     "npm-run-all2": "^7.0.2",
     "prettier": "^3.5.1",
     "typescript": "~5.7.3",
@@ -47,6 +47,8 @@
     "vite": "^6.1.0",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-vue-devtools": "^7.7.2",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
     "vue-tsc": "^2.2.2"
   }
 }

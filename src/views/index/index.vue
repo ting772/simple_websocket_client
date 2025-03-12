@@ -37,10 +37,13 @@ import { GLOBAL_WEBSOCKET } from '@/canstant/provideKey'
 import createWsJobCtl, { UPDATE_CUSTOM_MSG_CALLBACK_STATE } from './wsJobCtl'
 import type { CustomMsgUpdateType, SavedCustomMsgItemType } from '@/intefaface/main'
 import SendMsgModal from './components/sendMsgModal.vue'
+import createLogger from '@/utils/log'
+
+const logger = createLogger("[index view]")
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    console.debug('hot dispose callback')
+    logger.debug('hot dispose callback')
     if (ws.value) {
       ws.value.close()
     }
@@ -77,14 +80,14 @@ watch(filters, (newV) => {
 
   let filter = createFilter()
 
-  console.time('全量更新耗时')
+  let t0 = +new Date()
   //正则表达式更新，则全量更新列表
   filteredMsgs.value = msgs.reduce((acc, item) => {
     let pass = filter(item)
     if (pass) acc.push(item)
     return acc
   }, [] as Msg[])
-  console.timeEnd('全量更新耗时')
+  logger.log(`过滤更新耗时：${+new Date() - t0}ms`)
 })
 
 function createFilter() {
@@ -101,6 +104,7 @@ function createFilter() {
   })
 
   return function filter(msg: Msg) {
+    if (typeof msg.data !== 'string') return false
     return regs.every(reg => reg.test(msg.data))
   }
 }
@@ -206,7 +210,7 @@ function disconnect() {
     ws.value.close()
   } catch (err) {
     ElMessage.error('断开连接异常')
-    console.error(err)
+    logger.error(err)
   }
 }
 
@@ -260,7 +264,7 @@ function updateCustomMsgs(updateType: CustomMsgUpdateType, url: string, data: an
       wsJobCtl.cancelJob(ws.value, data as string, cb)
       break;
     default:
-      console.warn('未识别的更新类型')
+      logger.warn('未识别的更新类型')
       break;
   }
 }
@@ -285,7 +289,7 @@ function sendMsg(msg: string, ctx: { clear: () => void; close: () => void }) {
   }
   ws.value.send(msg)
   ElMessage.success('消息进入发送队列')
-  console.debug('[sendMsg]bufferedAmount：', ws.value.bufferedAmount)
+  logger.debug('[sendMsg]bufferedAmount：', ws.value.bufferedAmount)
   ctx.clear()
   ctx.close()
 }

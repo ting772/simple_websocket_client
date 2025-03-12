@@ -49,13 +49,14 @@ export default defineConfig(({ mode }) => {
             main: {
               // Shortcut of `build.lib.entry`
               entry: 'electron/main.ts',
+              vite: {
+                plugins: []
+              }
             },
             preload: {
               // Shortcut of `build.rollupOptions.input`
               input: 'electron/preload.ts',
             },
-            // Optional: Use Node.js API in the Renderer process
-            renderer: {},
           })
         ] :
         [
@@ -100,7 +101,7 @@ export default defineConfig(({ mode }) => {
           }
         }
       },
-      // minify: false
+      minify: true
     }
   }
 })

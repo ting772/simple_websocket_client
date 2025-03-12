@@ -24,7 +24,7 @@ export enum UPDATE_CUSTOM_MSG_CALLBACK_STATE {
 
 export default function createWsJobCtl() {
 
-  let { debug: debugLog, error: errorLog, warn: warnLog, log } = createLogger('[wsJobController]1')
+  let { debug: debugLog, error: errorLog, warn: warnLog, log } = createLogger('[ws job controller]')
   let wsCacheMap = new Map<WebSocket, {
     url: string;
     jobs: CustomMsgJob[]
@@ -49,24 +49,23 @@ export default function createWsJobCtl() {
            *  2:连接正在关闭中
            *  3:连接已关闭或无法打开
            */
-          let d = new Date()
           let readyState = ws.readyState
-          debugLog(`[job] ${d.toLocaleTimeString()} ws readyState：${readyState},url：${ws.url}`)
           if (readyState == 2 || readyState == 3) {
-            warnLog(`[job]ws状态为异常状态，readyState：${readyState}，自动取消任务`)
+            warnLog(`[job]ws异常状态,readyState：${readyState},url：${ws.url},自动取消任务`)
             cancel()
             return
           }
           ws.send(data)
+          debugLog(`[job]${jobId}运行成功`)
         } catch (err) {
-          errorLog('[job]发送任务失败', err)
+          errorLog('[job]${jobId}发送失败', err)
           cancel()
           return
         }
       }, interval)
 
       const cancel = () => {
-        log('[job]取消任务', jobId)
+        log(`[job]${jobId}任务取消`)
         cancelJob()
       }
 

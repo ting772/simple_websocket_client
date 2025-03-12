@@ -1,9 +1,13 @@
 
+import createLogger from "@/utils/log"
+
+const logger = createLogger('[ws module]')
+
 function setupConnectTimer(ws: WebSocket, timeout: number) {
   let timer = 0
 
   timer = setTimeout((ws: any) => {
-    console.error("websocket连接超时，超时设定：", timeout)
+    logger.error("websocket连接超时,超时设定:", timeout)
     ws.close()
     timer = 0
   }, timeout, ws)
@@ -21,19 +25,19 @@ export function connectWs(options: { url: string; timeout?: number }): Promise<W
     const clearTimer = setupConnectTimer(ws, timeout)
 
     ws.addEventListener('open', () => {
-      console.debug(`到websocket：${url}的链接已建立`)
+      logger.log(`websocket：${url}：链接已建立`)
       clearTimer()
       resolve(ws)
     })
 
     ws.addEventListener('close', (e: any) => {
-      console.debug(`websocket：${url}：close回调`)
+      logger.log(`websocket：${url}：close回调`)
       clearTimer()
       reject(e)
     })
 
     ws.addEventListener('error', (e: any) => {
-      console.error(`websocket：${url}：error回调`, e)
+      logger.error(`websocket：${url}：error回调`)
       clearTimer()
       reject(e)
     })

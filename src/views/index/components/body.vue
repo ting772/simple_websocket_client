@@ -1,10 +1,10 @@
 <template>
   <el-card class="ws-container-body" body-class="ws-container-body-card-body">
     <el-scrollbar :min-size="20" always ref="refBody" height="100%" v-infinite-scroll="() => { }">
-      <p v-for="item in list" :key="item.id">
+      <div v-for="item in list" :key="item.id">
         <el-text>{{ item.time }}</el-text>
-        {{ item.data }}
-      </p>
+        <pre> {{ item.data }}</pre>
+      </div>
       <!-- <p v-for="item in 100">item -{{ item }}</p> -->
     </el-scrollbar>
   </el-card>

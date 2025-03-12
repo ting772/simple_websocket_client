@@ -17,6 +17,6 @@
     "uninstallDisplayName": "${productName}",//卸载展示名称
     "createDesktopShortcut": true,//创建桌面快捷图标
     "createStartMenuShortcut": true,//开始菜单创建快捷图标
-    "shortcutName": "${productName}",//快捷名称
+    // "shortcutName": "${productName}",//快捷名称
   }
 }

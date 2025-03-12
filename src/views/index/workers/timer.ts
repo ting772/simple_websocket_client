@@ -13,8 +13,7 @@ onmessage = (e) => {
       break
 
     default:
-      console.warn('timer webworker不支持的操作类型')
-      break;
+      throw 'timer webworker不支持的操作类型'
   }
 };
 
